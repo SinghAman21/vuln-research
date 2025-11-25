@@ -1,19 +1,21 @@
 {
-  "name": "la-belle-cuisine",
+  "name": "vulnerable-restaurant-app",
   "version": "1.0.0",
-  "description": "A modern restaurant website with online reservation system",
-  "main": "src/server.js",
+  "description": "Deliberately vulnerable web application for security testing",
+  "main": "server.js",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
+  "keywords": ["security", "testing", "vulnerable", "education"],
+  "author": "",
+  "license": "MIT",
   "dependencies": {
-    "body-parser": "^1.20.2",
-    "cookie-parser": "^1.4.6",
-    "dotenv": "^16.3.1",
     "express": "^4.18.2",
-    "mysql": "^2.18.1",
-    "mysql2": "^3.6.1"
+    "express-session": "^1.17.3",
+    "mysql2": "^3.6.0",
+    "body-parser": "^1.20.2",
+    "ejs": "^3.1.9"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"

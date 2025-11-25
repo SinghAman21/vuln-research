@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vulnerable Restaurant - Home</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🍕 Restaurant Management System</h1>
+      <p class="warning">⚠️ VULNERABLE APPLICATION - FOR SECURITY TESTING ONLY</p>
+      <nav>
+        <a href="/">Home</a>
+        <a href="/menu">Menu</a>
+        <% if (user) { %>
+          <a href="/orders">Orders</a>
+          <% if (user.role === 'manager') { %>
+            <a href="/menu/add">Add Menu Item</a>
+          <% } %>
+          <a href="/logout">Logout (<%= user.username %>)</a>
+        <% } else { %>
+          <a href="/login">Login</a>
+        <% } %>
+      </nav>
+    </header>
+
+    <main>
+      <h2>Welcome to the Restaurant Management System</h2>
+      
+      <% if (user) { %>
+        <p>Hello, <strong><%= user.username %></strong>! Your role: <strong><%= user.role %></strong></p>
+      <% } else { %>
+        <p>Please <a href="/login">login</a> to access the full system.</p>
+      <% } %>
+
+      <div class="features">
+        <h3>System Features:</h3>
+        <ul>
+          <li>View menu items</li>
+          <li>Place orders</li>
+          <li>Manage menu (Managers only)</li>
+          <li>View order history</li>
+        </ul>
+      </div>
+
+      <div class="vulnerability-notice">
+        <h3>⚠️ Known Vulnerabilities (For Testing):</h3>
+        <ul>
+          <li>SQL Injection in login, search, and CRUD operations</li>
+          <li>Cross-Site Scripting (XSS) in form inputs</li>
+          <li>Broken Access Control via URL tampering</li>
+          <li>Weak session management</li>
+          <li>No CSRF protection</li>
+          <li>Plain text passwords</li>
+        </ul>
+      </div>
+
+      <div class="test-credentials">
+        <h3>Test Credentials:</h3>
+        <ul>
+          <li>Manager: <code>admin / admin123</code></li>
+          <li>Manager: <code>manager1 / manager</code></li>
+          <li>Employee: <code>employee1 / employee123</code></li>
+        </ul>
+      </div>
+    </main>
+
+    <footer>
+      <p>For educational purposes only. Do not deploy in production.</p>
+    </footer>
+  </div>
+</body>
+</html>
