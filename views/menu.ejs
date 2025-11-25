@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Menu - Restaurant</title>
+  <link rel="stylesheet" href="/public/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🍕 Restaurant Menu</h1>
+      <p class="warning">⚠️ VULNERABLE APPLICATION - FOR SECURITY TESTING ONLY</p>
+
+      <nav>
+        <a href="/">Home</a>
+        <a href="/menu">Menu</a>
+
+        <% if (user) { %>
+          <a href="/orders">Orders</a>
+          <% if (user.role === 'manager') { %>
+            <a href="/menu/add">Add Menu Item</a>
+          <% } %>
+          <a href="/logout">Logout (<%= user.username %>)</a>
+        <% } else { %>
+          <a href="/login">Login</a>
+        <% } %>
+      </nav>
+    </header>
+
+    <main>
+      <h2>Menu Items</h2>
+
+      <form method="GET" action="/search">
+        <input type="text" name="q" placeholder="Search dishes... (SQL Injection allowed)">
+        <button type="submit">Search</button>
+      </form>
+
+      <table>
+        <tr>
+          <th>Name</th>
+          <th>Price</th>
+          <th>Actions</th>
+        </tr>
+
+        <% menu.forEach(item => { %>
+          <tr>
+            <td><%= item.name %></td>
+            <td>₹<%= item.price %></td>
+            <td>
+              <% if (user && user.role === 'manager') { %>
+                <a href="/menu/edit/<%= item.id %>">Edit</a> |
+                <a href="/menu/delete/<%= item.id %>">Delete</a>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </table>
+    </main>
+
+    <footer>
+      <p>For educational purposes only. Do not deploy.</p>
+    </footer>
+  </div>
+</body>
+</html>

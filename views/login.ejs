@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Vulnerable Restaurant</title>
+  <link rel="stylesheet" href="/public/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🍕 Restaurant Management System</h1>
+      <p class="warning">⚠️ VULNERABLE APPLICATION - FOR SECURITY TESTING ONLY</p>
+      <nav>
+        <a href="/">Home</a>
+        <a href="/menu">Menu</a>
+        <a href="/login">Login</a>
+      </nav>
+    </header>
+
+    <main>
+      <h2>Login</h2>
+
+      <% if (error) { %>
+        <p class="error"><%= error %></p>
+      <% } %>
+
+      <form method="POST" action="/login">
+        <label>Username:</label>
+        <input type="text" name="username" placeholder="Enter username">
+
+        <label>Password:</label>
+        <input type="password" name="password" placeholder="Enter password">
+
+        <button type="submit">Login</button>
+      </form>
+    </main>
+
+    <footer>
+      <p>For educational purposes only. Do not deploy in production.</p>
+    </footer>
+  </div>
+</body>
+</html>

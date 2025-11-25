@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Orders</title>
+  <link rel="stylesheet" href="/public/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Your Orders</h1>
+      <p class="warning">⚠️ VULNERABLE APPLICATION - FOR SECURITY TESTING ONLY</p>
+
+      <nav>
+        <a href="/">Home</a>
+        <a href="/menu">Menu</a>
+        <a href="/orders">Orders</a>
+        <a href="/logout">Logout (<%= user.username %>)</a>
+      </nav>
+    </header>
+
+    <main>
+      <h2>Place an Order</h2>
+
+      <form method="POST" action="/orders/add">
+        <label>Menu Item ID:</label>
+        <input type="text" name="menu_id" placeholder="Enter ID (no auth checks)">
+
+        <label>Quantity:</label>
+        <input type="number" name="qty">
+
+        <button type="submit">Place Order</button>
+      </form>
+
+      <h2>Your Order History</h2>
+      <table>
+        <tr>
+          <th>ID</th>
+          <th>Item</th>
+          <th>Qty</th>
+          <th>Date</th>
+        </tr>
+
+        <% orders.forEach(o => { %>
+        <tr>
+          <td><%= o.id %></td>
+          <td><%= o.item %></td>
+          <td><%= o.qty %></td>
+          <td><%= o.created_at %></td>
+        </tr>
+        <% }); %>
+      </table>
+    </main>
+
+    <footer>
+      <p>For educational purposes only. Do not deploy.</p>
+    </footer>
+  </div>
+</body>
+</html>

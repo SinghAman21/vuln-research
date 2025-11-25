@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Menu Item</title>
+  <link rel="stylesheet" href="/public/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Add Menu Item</h1>
+      <p class="warning">⚠️ VULNERABLE APPLICATION - FOR SECURITY TESTING ONLY</p>
+
+      <nav>
+        <a href="/">Home</a>
+        <a href="/menu">Menu</a>
+        <a href="/logout">Logout</a>
+      </nav>
+    </header>
+
+    <main>
+      <h2>Add New Dish</h2>
+
+      <form method="POST" action="/menu/add">
+        <label>Name:</label>
+        <input type="text" name="name" placeholder="Pizza, Burger..." />
+
+        <label>Price:</label>
+        <input type="text" name="price" placeholder="Enter price (no validation)" />
+
+        <button type="submit">Add Item</button>
+      </form>
+    </main>
+
+    <footer>
+      <p>For educational purposes only. Do not deploy.</p>
+    </footer>
+  </div>
+</body>
+</html>
