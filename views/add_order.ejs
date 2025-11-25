@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Menu Item - La Belle Cuisine</title>
+    <title>Place Order - La Belle Cuisine</title>
 
     <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -43,29 +43,34 @@
     <!-- Header Section -->
     <section class="hero" style="height: 40vh; min-height: 300px;">
         <div class="hero-content">
-            <h1>Add Menu Item</h1>
-            <p>Expand our culinary offerings</p>
+            <h1>Place an Order</h1>
+            <p>Select your favorite dishes</p>
         </div>
     </section>
 
-    <!-- Add Menu Form Section -->
+    <!-- Add Order Form Section -->
     <section class="reservations">
         <div class="container">
-            <h2 class="section-title">New Dish Details</h2>
+            <h2 class="section-title">Order Details</h2>
             <p class="warning" style="text-align: center; color: red; margin-bottom: 20px;">⚠️ VULNERABLE APPLICATION - FOR SECURITY TESTING ONLY</p>
 
-            <form class="reservation-form" method="POST" action="/menu/add">
+            <form class="reservation-form" method="POST" action="/orders/add">
                 <div class="form-group">
-                    <label for="name">Dish Name</label>
-                    <input type="text" id="name" name="name" placeholder="e.g., Truffle Risotto" required>
+                    <label for="item_id">Select Dish</label>
+                    <select id="item_id" name="item_id" required>
+                        <option value="">-- Choose a Dish --</option>
+                        <% items.forEach(item => { %>
+                            <option value="<%= item.id %>" <%= (typeof selectedItemId !== 'undefined' && selectedItemId == item.id) ? 'selected' : '' %>><%= item.name %> - ₹<%= item.price %></option>
+                        <% }); %>
+                    </select>
                 </div>
 
                 <div class="form-group">
-                    <label for="price">Price</label>
-                    <input type="text" id="price" name="price" placeholder="e.g., 25.00" required>
+                    <label for="quantity">Quantity</label>
+                    <input type="number" id="quantity" name="quantity" value="1" min="1" required>
                 </div>
 
-                <button type="submit" class="btn-primary" style="width: 100%;">Add Item</button>
+                <button type="submit" class="btn-primary" style="width: 100%;">Place Order</button>
             </form>
         </div>
     </section>

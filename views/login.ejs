@@ -3,45 +3,92 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login - Vulnerable Restaurant</title>
-  <!-- <link rel="stylesheet" href="/public/style.css"> -->
-   <link rel="stylesheet" href="/css/global.css">
-<link rel="stylesheet" href="/css/login.css">
-
+  <title>Login - La Belle Cuisine</title>
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>🍕 Restaurant Management System</h1>
-      <p class="warning">⚠️ VULNERABLE APPLICATION - FOR SECURITY TESTING ONLY</p>
-      <nav>
-        <a href="/">Home</a>
-        <a href="/menu">Menu</a>
-        <a href="/login">Login</a>
-      </nav>
-    </header>
-
-    <main>
-      <h2>Login</h2>
-
-      <% if (error) { %>
-        <p class="error"><%= error %></p>
+  <!-- Navigation -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-brand">
+      <a href="/">La Belle Cuisine</a>
+    </div>
+    <div class="nav-toggle" id="navToggle">
+      <i class="fas fa-bars"></i>
+    </div>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="/">Home</a></li>
+      <li><a href="#about">About</a></li>
+      <li><a href="/menu">Menu</a></li>
+      <li><a href="#reservations">Reservations</a></li>
+      <li><a href="#contact">Contact</a></li>
+      <% if (!user) { %>
+        <li><a href="/login">Login</a></li>
+      <% } else { %>
+        <li><a href="/orders">Orders</a></li>
+        <li><a href="/logout">Logout (<%= user.username %>)</a></li>
       <% } %>
+    </ul>
+  </nav>
 
-      <form method="POST" action="/login">
-        <label>Username:</label>
-        <input type="text" name="username" placeholder="Enter username">
+  <!-- Hero Section -->
+  <section class="hero" style="height: 30vh; min-height: 200px; display:flex; align-items:center; justify-content:center;">
+    <div class="hero-content">
+      <h1>Login</h1>
+    </div>
+  </section>
 
-        <label>Password:</label>
-        <input type="password" name="password" placeholder="Enter password">
-
-        <button type="submit">Login</button>
+  <!-- Login Form Section -->
+  <section class="login-section" style="padding:2rem 0;">
+    <div class="container" style="max-width:400px; margin:auto;">
+      <% if (error) { %>
+        <p class="error" style="color:red; text-align:center;"><%= error %></p>
+      <% } %>
+      <form method="POST" action="/login" class="login-form" style="display:flex; flex-direction:column; gap:1rem;">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" placeholder="Enter username" required class="input-field" />
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" placeholder="Enter password" required class="input-field" />
+        </div>
+        <button type="submit" class="btn-primary" style="width:100%;">Login</button>
       </form>
-    </main>
+    </div>
+  </section>
 
-    <footer>
-      <p>For educational purposes only. Do not deploy in production.</p>
-    </footer>
-  </div>
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-section">
+          <h3>La Belle Cuisine</h3>
+          <p>For educational purposes only. Do not deploy in production.</p>
+        </div>
+        <div class="footer-section">
+          <h3>Quick Links</h3>
+          <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="#about">About</a></li>
+            <li><a href="/menu">Menu</a></li>
+            <li><a href="#contact">Contact</a></li>
+          </ul>
+        </div>
+        <div class="footer-section">
+          <h3>Newsletter</h3>
+          <form class="newsletter-form">
+            <input type="email" placeholder="Enter your email" />
+            <button type="submit" class="btn-secondary">Subscribe</button>
+          </form>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2025 La Belle Cuisine. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- JS -->
+  <script src="/js/main.js"></script>
 </body>
 </html>

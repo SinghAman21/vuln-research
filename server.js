@@ -6,6 +6,7 @@ const mysql = require('mysql2');
 const session = require('express-session');
 const bodyParser = require('body-parser');
 const path = require('path');
+const fakeData = require('./data/fakeData');
 
 const app = express();
 const PORT = 3000;
@@ -65,18 +66,25 @@ app.get('/', (req, res) => {
 // LOGIN (VULNERABLE)
 // ------------------------------------------------------------
 app.get('/login', (req, res) => {
-  res.render('login', { error: null });
+  res.render('login', { error: null
+    ,    user: req.session.user || null
+   });
 });
 
 app.post('/login', (req, res) => {
+  const { username, password } = req.body;
+
   // Fake DB mode
   if (USE_FAKE_DB) {
-    req.session.user = { id: 1, username: "demo", role: "manager" };
-    return res.redirect('/menu');
+    const user = fakeData.users.find(username, password);
+    if (user) {
+        req.session.user = { id: user.id, username: user.username, role: user.role };
+        return res.redirect('/menu');
+    } else {
+        return res.render('login', { error: 'Invalid credentials (try admin/admin123 or demo/password)' });
+    }
   }
 
-  const { username, password } = req.body;
-  
   const query = `SELECT * FROM users WHERE username = '${username}' AND password = '${password}'`;
   
   console.log('Executing query:', query);
@@ -114,10 +122,7 @@ app.get('/menu', (req, res) => {
   if (USE_FAKE_DB) {
     return res.render('menu', {
       user: req.session.user,
-      menu: [
-        { id: 1, name: "Fake Pizza", description: "UI mode item", price: 199 },
-        { id: 2, name: "Fake Burger", description: "UI mode item", price: 149 }
-      ]
+      menu: fakeData.menu.getAll()
     });
   }
 
@@ -130,17 +135,25 @@ app.get('/menu', (req, res) => {
 
 // Add menu item form
 app.get('/menu/add', (req, res) => {
+  if (!req.session.user || req.session.user.role !== 'manager') {
+      return res.redirect('/login');
+  }
   res.render('add_menu', { user: req.session.user });
 });
 
 // Add menu item (POST)
 app.post('/menu/add', (req, res) => {
-  if (USE_FAKE_DB) {
-    return res.redirect('/menu');
+  if (!req.session.user || req.session.user.role !== 'manager') {
+      return res.status(403).send('Unauthorized');
   }
 
   const { name, description, price } = req.body;
-  
+
+  if (USE_FAKE_DB) {
+    fakeData.menu.add({ name, description, price });
+    return res.redirect('/menu');
+  }
+
   const query = `INSERT INTO menu_items (name, description, price) VALUES ('${name}', '${description}', ${price})`;
   
   db.query(query, (err) => {
@@ -153,18 +166,19 @@ app.post('/menu/add', (req, res) => {
 
 // Edit menu item form
 app.get('/menu/edit/:id', (req, res) => {
+  if (!req.session.user || req.session.user.role !== 'manager') {
+      return res.redirect('/login');
+  }
+
   const id = req.params.id;
 
   if (USE_FAKE_DB) {
-    return res.render('edit_menu', {
-      user: req.session.user,
-      item: {
-        id,
-        name: "Fake Item",
-        description: "Fake description",
-        price: 100
-      }
-    });
+    const item = fakeData.menu.getById(id);
+    if (item) {
+        return res.render('edit_menu', { user: req.session.user, item });
+    } else {
+        return res.send('Item not found');
+    }
   }
   
   db.query(`SELECT * FROM menu_items WHERE id = ${id}`, (err, results) => {
@@ -177,12 +191,17 @@ app.get('/menu/edit/:id', (req, res) => {
 
 // Edit menu item (POST)
 app.post('/menu/edit/:id', (req, res) => {
-  if (USE_FAKE_DB) {
-    return res.redirect('/menu');
+  if (!req.session.user || req.session.user.role !== 'manager') {
+      return res.status(403).send('Unauthorized');
   }
 
   const id = req.params.id;
   const { name, description, price } = req.body;
+
+  if (USE_FAKE_DB) {
+    fakeData.menu.update(id, { name, description, price });
+    return res.redirect('/menu');
+  }
   
   const query = `UPDATE menu_items SET name='${name}', description='${description}', price=${price} WHERE id=${id}`;
   
@@ -195,17 +214,22 @@ app.post('/menu/edit/:id', (req, res) => {
 });
 
 // Delete menu item
-app.post('/menu/delete/:id', (req, res) => {
-  if (USE_FAKE_DB) {
-    return res.redirect('/menu');
-  }
-
-  const id = req.params.id;
+app.get('/menu/delete/:id', (req, res) => { // Changed to GET for simplicity in links, usually should be POST/DELETE
+    if (!req.session.user || req.session.user.role !== 'manager') {
+        return res.redirect('/login');
+    }
   
-  db.query(`DELETE FROM menu_items WHERE id = ${id}`, (err) => {
-    if (err) throw err;
-    res.redirect('/menu');
-  });
+    const id = req.params.id;
+
+    if (USE_FAKE_DB) {
+      fakeData.menu.delete(id);
+      return res.redirect('/menu');
+    }
+    
+    db.query(`DELETE FROM menu_items WHERE id = ${id}`, (err) => {
+      if (err) throw err;
+      res.redirect('/menu');
+    });
 });
 
 // ------------------------------------------------------------
@@ -217,12 +241,13 @@ app.get('/orders', (req, res) => {
   if (!req.session.user) return res.redirect('/login');
 
   if (USE_FAKE_DB) {
-    return res.render('orders', {
-      user: req.session.user,
-      orders: [
-        { id: 1, item_name: "Fake Pizza", quantity: 2, username: "demo" }
-      ]
-    });
+    let orders;
+    if (req.session.user.role === 'manager') {
+        orders = fakeData.orders.getAll();
+    } else {
+        orders = fakeData.orders.getByUser(req.session.user.id);
+    }
+    return res.render('orders', { user: req.session.user, orders });
   }
   
   let query;
@@ -250,30 +275,35 @@ app.get('/orders', (req, res) => {
 
 // Add order form
 app.get('/orders/add', (req, res) => {
+  if (!req.session.user) return res.redirect('/login');
+  
+  const selectedItemId = req.query.item_id;
+
   if (USE_FAKE_DB) {
     return res.render('add_order', {
       user: req.session.user,
-      items: [
-        { id: 1, name: "Fake Pizza" },
-        { id: 2, name: "Fake Burger" }
-      ]
+      items: fakeData.menu.getAll(),
+      selectedItemId
     });
   }
 
   db.query('SELECT * FROM menu_items', (err, items) => {
     if (err) throw err;
-    res.render('add_order', { user: req.session.user, items });
+    res.render('add_order', { user: req.session.user, items, selectedItemId });
   });
 });
 
 // Add order (POST)
 app.post('/orders/add', (req, res) => {
-  if (USE_FAKE_DB) {
-    return res.redirect('/orders');
-  }
+  if (!req.session.user) return res.redirect('/login');
 
   const { item_id, quantity } = req.body;
-  const user_id = req.session.user ? req.session.user.id : 1;
+  const user_id = req.session.user.id;
+
+  if (USE_FAKE_DB) {
+    fakeData.orders.add({ user_id, item_id: parseInt(item_id), quantity: parseInt(quantity) });
+    return res.redirect('/orders');
+  }
   
   const query = `INSERT INTO orders (user_id, item_id, quantity) VALUES (${user_id}, ${item_id}, ${quantity})`;
   
@@ -281,35 +311,6 @@ app.post('/orders/add', (req, res) => {
     if (err) {
       return res.send('Error: ' + err.message);
     }
-    res.redirect('/orders');
-  });
-});
-
-// Edit order
-app.post('/orders/edit/:id', (req, res) => {
-  if (USE_FAKE_DB) {
-    return res.redirect('/orders');
-  }
-
-  const id = req.params.id;
-  const { quantity } = req.body;
-  
-  db.query(`UPDATE orders SET quantity=${quantity} WHERE id=${id}`, (err) => {
-    if (err) throw err;
-    res.redirect('/orders');
-  });
-});
-
-// Delete order
-app.post('/orders/delete/:id', (req, res) => {
-  if (USE_FAKE_DB) {
-    return res.redirect('/orders');
-  }
-
-  const id = req.params.id;
-  
-  db.query(`DELETE FROM orders WHERE id=${id}`, (err) => {
-    if (err) throw err;
     res.redirect('/orders');
   });
 });
@@ -324,9 +325,7 @@ app.get('/search', (req, res) => {
     return res.render('search_results', {
       user: req.session.user,
       searchTerm,
-      results: [
-        { id: 1, name: "Fake Search Item", description: "UI mode", price: 123 }
-      ]
+      results: fakeData.menu.search(searchTerm)
     });
   }
   
