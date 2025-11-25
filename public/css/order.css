@@ -1,0 +1,18 @@
+/* ========== ORDERS PAGE ========== */
+
+.order-table {
+    width: 90%;
+    margin: 3rem auto;
+    border-collapse: collapse;
+    background: white;
+}
+
+.order-table th,
+.order-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #ddd;
+}
+
+.order-table tr:hover {
+    background: #fafafa;
+}
