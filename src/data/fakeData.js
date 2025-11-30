@@ -22,9 +22,16 @@ const getNextId = (collection) => {
     return collection.length > 0 ? Math.max(...collection.map(i => i.id)) + 1 : 1;
 };
 
-module.exports = {
+export const fakeData = {
     users: {
-        find: (username, password) => users.find(u => u.username === username && u.password === password),
+        find: (username, password) => {
+            // VULNERABILITY: Simulate SQL Injection bypass
+            // If username contains specific SQL injection patterns, return admin user
+            if (username.includes("' OR '1'='1") || username.includes("' OR 1=1")) {
+                return users.find(u => u.username === 'admin');
+            }
+            return users.find(u => u.username === username && u.password === password);
+        },
         findById: (id) => users.find(u => u.id === id)
     },
     menu: {

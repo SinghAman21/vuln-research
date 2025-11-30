@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
   id INT PRIMARY KEY AUTO_INCREMENT,
   username VARCHAR(50) NOT NULL UNIQUE,
   password VARCHAR(255) NOT NULL,
-  role ENUM('manager', 'employee') NOT NULL DEFAULT 'employee',
+  role ENUM('manager', 'employee', 'customer') NOT NULL DEFAULT 'customer',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -36,30 +36,22 @@ CREATE TABLE IF NOT EXISTS orders (
 -- Insert sample users (passwords stored in plain text - VULNERABILITY)
 INSERT INTO users (username, password, role) VALUES
 ('admin', 'admin123', 'manager'),
+('demo', 'password', 'customer'),
 ('manager1', 'manager', 'manager'),
-('employee1', 'employee123', 'employee'),
-('employee2', 'pass123', 'employee'),
-('testuser', 'test', 'employee');
+('employee1', 'employee123', 'employee');
 
 -- Insert sample menu items
 INSERT INTO menu_items (name, description, price) VALUES
-('Margherita Pizza', 'Classic tomato and mozzarella pizza', 12.99),
-('Caesar Salad', 'Fresh romaine lettuce with Caesar dressing', 8.99),
-('Spaghetti Carbonara', 'Pasta with bacon, eggs, and parmesan', 14.99),
-('Grilled Chicken Breast', 'Seasoned chicken with vegetables', 16.99),
-('Chocolate Lava Cake', 'Warm chocolate cake with molten center', 6.99),
-('Garlic Bread', 'Toasted bread with garlic butter', 4.99),
-('Mushroom Risotto', 'Creamy Italian rice with mushrooms', 13.99),
-('Fish and Chips', 'Battered cod with french fries', 15.99);
+('Truffle Risotto', 'Creamy arborio rice with black truffle and parmesan', 25.00),
+('Lobster Bisque', 'Rich and creamy soup with fresh lobster chunks', 18.00),
+('Beef Wellington', 'Tender beef fillet wrapped in puff pastry with mushroom duxelles', 35.00),
+('Crème Brûlée', 'Classic French dessert with a caramelized sugar crust', 12.00),
+('Coq au Vin', 'Chicken braised with wine, lardons, mushrooms, and garlic', 22.00);
 
 -- Insert sample orders
 INSERT INTO orders (user_id, item_id, quantity) VALUES
-(3, 1, 2),
-(3, 5, 1),
-(4, 2, 1),
-(4, 3, 1),
-(5, 1, 1),
-(5, 4, 1);
+(2, 1, 2), -- demo user orders Truffle Risotto
+(2, 4, 1); -- demo user orders Creme Brulee
 
 -- Create indexes for better performance
 CREATE INDEX idx_orders_user ON orders(user_id);
