@@ -1,21 +1,63 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { fakeData } from '../data/fakeData';
+import { menuAPI, orderAPI } from '../services/api';
 
 const Menu = () => {
     const { user } = useAuth();
     const [menuItems, setMenuItems] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        setMenuItems(fakeData.menu.getAll());
+        loadMenuItems();
     }, []);
 
-    const handleSearch = (e) => {
+    const loadMenuItems = async () => {
+        try {
+            const items = await menuAPI.getAll();
+            setMenuItems(items);
+        } catch (err) {
+            console.error('Failed to load menu items:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSearch = async (e) => {
         e.preventDefault();
-        const results = fakeData.menu.search(searchTerm);
-        setMenuItems(results);
+        // For now, just filter locally since backend doesn't have search endpoint
+        // In production, you'd want to add a search endpoint
+        await loadMenuItems();
+        if (searchTerm) {
+            const filtered = menuItems.filter(item =>
+                item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (item.description && item.description.toLowerCase().includes(searchTerm.toLowerCase()))
+            );
+            setMenuItems(filtered);
+        }
+    };
+
+    const handleOrder = async (itemId) => {
+        if (!user) {
+            alert('Please login to place an order');
+            return;
+        }
+        try {
+            await orderAPI.create(itemId, 1);
+            alert('Order placed!');
+        } catch (err) {
+            alert('Failed to place order');
+        }
+    };
+
+    const handleDelete = async (itemId) => {
+        try {
+            await menuAPI.delete(itemId);
+            await loadMenuItems(); // Refresh the list
+        } catch (err) {
+            alert('Failed to delete item');
+        }
     };
 
     return (
@@ -74,10 +116,7 @@ const Menu = () => {
                                             <button
                                                 className="btn-sm"
                                                 style={{ backgroundColor: 'var(--primary-color)', border: 'none', cursor: 'pointer' }}
-                                                onClick={() => {
-                                                    fakeData.orders.add({ user_id: user.id, item_id: item.id, quantity: 1 });
-                                                    alert('Order placed!');
-                                                }}
+                                                onClick={() => handleOrder(item.id)}
                                             >
                                                 Order Now
                                             </button>
@@ -88,10 +127,7 @@ const Menu = () => {
                                                     <button
                                                         className="btn-sm btn-delete"
                                                         style={{ marginLeft: '5px', border: 'none', cursor: 'pointer' }}
-                                                        onClick={() => {
-                                                            fakeData.menu.delete(item.id);
-                                                            setMenuItems(fakeData.menu.getAll()); // Refresh
-                                                        }}
+                                                        onClick={() => handleDelete(item.id)}
                                                     >
                                                         Delete
                                                     </button>

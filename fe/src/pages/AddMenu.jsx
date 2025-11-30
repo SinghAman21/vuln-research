@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { fakeData } from '../data/fakeData';
+import { menuAPI } from '../services/api';
 
 const AddMenu = () => {
     const { user } = useAuth();
@@ -16,10 +16,14 @@ const AddMenu = () => {
         }
     }, [user, navigate]);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        fakeData.menu.add({ name, description, price });
-        navigate('/menu');
+        try {
+            await menuAPI.add({ name, description, price });
+            navigate('/menu');
+        } catch (err) {
+            alert('Failed to add menu item');
+        }
     };
 
     return (

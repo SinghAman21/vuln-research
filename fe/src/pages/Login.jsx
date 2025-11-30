@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { fakeData } from '../data/fakeData';
+import { authAPI } from '../services/api';
 
 const Login = () => {
     const [username, setUsername] = useState('');
@@ -10,20 +10,22 @@ const Login = () => {
     const { login } = useAuth();
     const navigate = useNavigate();
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
 
-        // VULNERABILITY: SQL Injection Simulation
-        // The fakeData.users.find method contains the logic to simulate bypassing auth
-        // if the username contains specific SQL injection strings.
-        const user = fakeData.users.find(username, password);
+        try {
+            // VULNERABILITY: SQL Injection - Backend handles the vulnerability
+            const response = await authAPI.login(username, password);
 
-        if (user) {
-            login({ id: user.id, username: user.username, role: user.role });
-            navigate('/menu');
-        } else {
-            setError('Invalid credentials (try admin/admin123 or demo/password)');
+            if (response.token) {
+                login({ id: response.token, username: username, role: response.role });
+                navigate('/menu');
+            } else {
+                setError(response.error || 'Invalid credentials');
+            }
+        } catch (err) {
+            setError('Login failed. Please try again.');
         }
     };
 

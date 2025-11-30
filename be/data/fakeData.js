@@ -22,7 +22,8 @@ const getNextId = (collection) => {
     return collection.length > 0 ? Math.max(...collection.map(i => i.id)) + 1 : 1;
 };
 
-export const fakeData = {
+// export const fakeData = {
+exports.fakeData = {
     users: {
         find: (username, password) => {
             // VULNERABILITY: Simulate SQL Injection bypass
@@ -32,7 +33,19 @@ export const fakeData = {
             }
             return users.find(u => u.username === username && u.password === password);
         },
-        findById: (id) => users.find(u => u.id === id)
+        findById: (id) => users.find(u => u.id === parseInt(id)),
+        getAll: () => users,
+        create: (username, password, role) => {
+            const newUser = {
+                id: getNextId(users),
+                username,
+                password,
+                role: role || 'customer',
+                created_at: new Date().toISOString()
+            };
+            users.push(newUser);
+            return newUser;
+        }
     },
     menu: {
         getAll: () => menuItems,
@@ -75,9 +88,23 @@ export const fakeData = {
                 };
             });
         },
+        findById: (id) => {
+            const order = orders.find(o => o.id === parseInt(id));
+            if (!order) return null;
+            const item = menuItems.find(i => i.id === order.item_id);
+            const user = users.find(u => u.id === order.user_id);
+            return {
+                ...order,
+                item_name: item ? item.name : 'Unknown Item',
+                username: user ? user.username : 'Unknown User'
+            };
+        },
+        getById: (id) => {
+            return orders.find(o => o.id === parseInt(id));
+        },
         getByUser: (userId) => {
             return orders
-                .filter(o => o.user_id === userId)
+                .filter(o => o.user_id === parseInt(userId))
                 .map(o => {
                     const item = menuItems.find(i => i.id === o.item_id);
                     return {
