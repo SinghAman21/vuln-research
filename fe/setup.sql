@@ -169,3 +169,6 @@ SELECT
 -- ============================================================================
 -- END OF SETUP SCRIPT
 -- ============================================================================
+
+
+mysql -h restaurant.chq66w4ek3xa.ap-south-1.rds.amazonaws.com -P 3306 -u postgres -p restaurant < ../fe/setup.sql

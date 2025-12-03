@@ -1,0 +1,337 @@
+{
+  "Terraform": {
+    "required_version": ">= 1.0",
+    "required_providers": {
+      "aws": {
+        "source": "hashicorp/aws",
+        "version": "~> 5.0"
+      }
+    }
+  },
+  "provider": {
+    "aws": {
+      "region": "ap-southeast-1"
+    }
+  },
+  "data_sources": {
+    "aws_availability_zones": {
+      "available": {
+        "state": "available"
+      }
+    }
+  },
+  "variables": {
+    "github_repo": "https://github.com/SinghAman21/vuln-research.git",
+    "db_name": "restaurant",
+    "db_user": "postgres",
+    "db_pass": "admin1234"
+  },
+  "resources": {
+    "aws_vpc": {
+      "vuln_vpc": {
+        "cidr_block": "10.0.0.0/16",
+        "enable_dns_hostnames": true,
+        "enable_dns_support": true,
+        "tags": {
+          "Name": "vuln-research-vpc"
+        }
+      }
+    },
+    "aws_internet_gateway": {
+      "vuln_igw": {
+        "vpc_id": "${aws_vpc.vuln_vpc.id}",
+        "tags": {
+          "Name": "vuln-igw"
+        }
+      }
+    },
+    "aws_subnet": {
+      "public_subnet": {
+        "vpc_id": "${aws_vpc.vuln_vpc.id}",
+        "cidr_block": "10.0.1.0/24",
+        "map_public_ip_on_launch": true,
+        "availability_zone": "${data.aws_availability_zones.available.names[0]}",
+        "tags": {
+          "Name": "vuln-public-subnet-1"
+        }
+      },
+      "public_subnet_2": {
+        "vpc_id": "${aws_vpc.vuln_vpc.id}",
+        "cidr_block": "10.0.2.0/24",
+        "map_public_ip_on_launch": true,
+        "availability_zone": "${data.aws_availability_zones.available.names[1]}",
+        "tags": {
+          "Name": "vuln-public-subnet-2"
+        }
+      }
+    },
+    "aws_route_table": {
+      "public_rt": {
+        "vpc_id": "${aws_vpc.vuln_vpc.id}",
+        "route": [
+          {
+            "cidr_block": "0.0.0.0/0",
+            "gateway_id": "${aws_internet_gateway.vuln_igw.id}"
+          }
+        ],
+        "tags": {
+          "Name": "vuln-public-rt"
+        }
+      }
+    },
+    "aws_route_table_association": {
+      "public_rta": {
+        "subnet_id": "${aws_subnet.public_subnet.id}",
+        "route_table_id": "${aws_route_table.public_rt.id}"
+      },
+      "public_rta_2": {
+        "subnet_id": "${aws_subnet.public_subnet_2.id}",
+        "route_table_id": "${aws_route_table.public_rt.id}"
+      }
+    },
+    "aws_security_group": {
+      "eb_sg": {
+        "name_prefix": "vuln-eb-",
+        "vpc_id": "${aws_vpc.vuln_vpc.id}",
+        "ingress": [
+          {
+            "from_port": 80,
+            "to_port": 80,
+            "protocol": "tcp",
+            "cidr_blocks": ["0.0.0.0/0"]
+          },
+          {
+            "from_port": 443,
+            "to_port": 443,
+            "protocol": "tcp",
+            "cidr_blocks": ["0.0.0.0/0"]
+          }
+        ],
+        "egress": [
+          {
+            "from_port": 0,
+            "to_port": 0,
+            "protocol": "-1",
+            "cidr_blocks": ["0.0.0.0/0"]
+          }
+        ],
+        "tags": {
+          "Name": "vuln-eb-sg"
+        }
+      },
+      "rds_sg": {
+        "name_prefix": "vuln-rds-",
+        "vpc_id": "${aws_vpc.vuln_vpc.id}",
+        "ingress": [
+          {
+            "from_port": 5432,
+            "to_port": 5432,
+            "protocol": "tcp",
+            "security_groups": ["${aws_security_group.eb_sg.id}"]
+          }
+        ],
+        "tags": {
+          "Name": "vuln-rds-sg"
+        }
+      }
+    },
+    "aws_db_subnet_group": {
+      "vuln_subnet_group": {
+        "name": "vuln-subnet-group",
+        "subnet_ids": ["${aws_subnet.public_subnet.id}", "${aws_subnet.public_subnet_2.id}"]
+      }
+    },
+    "aws_db_instance": {
+      "vuln_postgres": {
+        "identifier": "vuln-postgres",
+        "engine": "postgres",
+        "engine_version": "15.5",
+        "instance_class": "db.t3.micro",
+        "allocated_storage": 20,
+        "max_allocated_storage": 100,
+        "storage_type": "gp3",
+        "db_name": "${var.db_name}",
+        "username": "${var.db_user}",
+        "password": "${var.db_pass}",
+        "vpc_security_group_ids": ["${aws_security_group.rds_sg.id}"],
+        "db_subnet_group_name": "${aws_db_subnet_group.vuln_subnet_group.name}",
+        "skip_final_snapshot": true,
+        "publicly_accessible": false,
+        "backup_retention_period": 1,
+        "tags": {
+          "Name": "vuln-postgres"
+        }
+      }
+    },
+    "aws_elastic_beanstalk_application": {
+      "vuln_app": {
+        "name": "vuln-research-app"
+      }
+    },
+    "aws_s3_bucket": {
+      "backend_bucket": {
+        "bucket": "vuln-research-backend-${random_id.bucket_suffix.hex}"
+      },
+      "frontend_bucket": {
+        "bucket": "vuln-research-frontend-${random_id.bucket_suffix.hex}"
+      }
+    },
+    "random_id": {
+      "bucket_suffix": {
+        "byte_length": 8
+      }
+    },
+    "aws_elastic_beanstalk_application_version": {
+      "vuln_backend": {
+        "name": "vuln-backend-v1",
+        "application": "${aws_elastic_beanstalk_application.vuln_app.name}",
+        "source_bundle": {
+          "s3_bucket": "${aws_s3_bucket.backend_bucket.id}",
+          "s3_key": "backend.zip"
+        }
+      }
+    },
+    "aws_elastic_beanstalk_environment": {
+      "vuln_env": {
+        "name": "vuln-research-env",
+        "application": "${aws_elastic_beanstalk_application.vuln_app.name}",
+        "solution_stack_name": "64bit Amazon Linux 2023 v4.1.5 running Node.js 20",
+        "setting": [
+          {
+            "namespace": "aws:autoscaling:launchconfiguration",
+            "name": "IamInstanceProfile",
+            "value": "aws-elasticbeanstalk-ec2-role"
+          },
+          {
+            "namespace": "aws:ec2:vpc",
+            "name": "VPCId",
+            "value": "${aws_vpc.vuln_vpc.id}"
+          },
+          {
+            "namespace": "aws:ec2:vpc",
+            "name": "Subnets",
+            "value": "${aws_subnet.public_subnet.id}"
+          },
+          {
+            "namespace": "aws:elasticbeanstalk:environment:process:default",
+            "name": "Port",
+            "value": "3000"
+          },
+          {
+            "namespace": "aws:elasticbeanstalk:environment:proxy:staticfiles",
+            "name": "StaticFiles",
+            "value": "/public/*"
+          },
+          {
+            "namespace": "AWS::ElasticBeanstalk::CloudWatchLogs",
+            "name": "StreamLogs",
+            "value": "true"
+          },
+          {
+            "namespace": "aws:elasticbeanstalk:application:environment",
+            "name": "DB_HOST",
+            "value": "${aws_db_instance.vuln_postgres.endpoint}"
+          },
+          {
+            "namespace": "aws:elasticbeanstalk:application:environment",
+            "name": "DB_NAME",
+            "value": "${var.db_name}"
+          },
+          {
+            "namespace": "aws:elasticbeanstalk:application:environment",
+            "name": "DB_USER",
+            "value": "${var.db_user}"
+          },
+          {
+            "namespace": "aws:elasticbeanstalk:application:environment",
+            "name": "DB_PASSWORD",
+            "value": "${var.db_pass}"
+          }
+        ],
+        "depends_on": [
+          "aws_db_instance.vuln_postgres",
+          "aws_elastic_beanstalk_application_version.vuln_backend"
+        ]
+      }
+    },
+    "aws_s3_bucket_website_configuration": {
+      "frontend_website": {
+        "bucket": "${aws_s3_bucket.frontend_bucket.id}",
+        "index_document": {
+          "suffix": "index.html"
+        },
+        "error_document": {
+          "key": "index.html"
+        }
+      }
+    },
+    "aws_s3_bucket_policy": {
+      "frontend_policy": {
+        "bucket": "${aws_s3_bucket.frontend_bucket.id}",
+        "policy": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "PublicReadGetObject",
+              "Effect": "Allow",
+              "Principal": "*",
+              "Action": "s3:GetObject",
+              "Resource": "${aws_s3_bucket.frontend_bucket.arn}/*"
+            }
+          ]
+        }
+      }
+    },
+    "aws_iam_role": {
+      "eb_service_role": {
+        "name": "aws-elasticbeanstalk-service-role",
+        "assume_role_policy": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "elasticbeanstalk.amazonaws.com"
+              }
+            }
+          ]
+        }
+      },
+      "eb_instance_role": {
+        "name": "aws-elasticbeanstalk-ec2-role",
+        "assume_role_policy": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ec2.amazonaws.com"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "aws_iam_role_policy_attachment": {
+      "eb_service_policy": {
+        "role": "${aws_iam_role.eb_service_role.name}",
+        "policy_arn": "arn:aws:iam::aws:policy/service-role/AWSElasticBeanstalkService"
+      },
+      "eb_instance_policy": {
+        "role": "${aws_iam_role.eb_instance_role.name}",
+        "policy_arn": "arn:aws:iam::aws:policy/AWSElasticBeanstalkWebTier"
+      }
+    }
+  },
+  "outputs": {
+    "frontend_url": "http://${aws_s3_bucket.frontend_bucket.bucket}.s3-website-ap-southeast-1.amazonaws.com",
+    "backend_url": "${aws_elastic_beanstalk_environment.vuln_env.cname}",
+    "rds_endpoint": "${aws_db_instance.vuln_postgres.endpoint}",
+    "db_password": {
+      "value": "${var.db_pass}",
+      "sensitive": true
+    }
+  }
+}

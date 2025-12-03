@@ -1,5 +1,5 @@
 const express = require('express');
-const mysql = require('mysql2');
+const { Pool } = require('pg');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const { fakeData } = require('./data/fakeData');
@@ -15,48 +15,33 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // Database connection state
 let isDbConnected = false;
 
-// Create DB connection
-const db = mysql.createConnection({
+// Create DB connection pool
+const pool = new Pool({
     user: 'postgres',
     host: 'restaurant.chq66w4ek3xa.ap-south-1.rds.amazonaws.com',
     database: 'restaurant',
     password: 'admin1234',
     port: 5432,
-    multipleStatements: true,
-    // host: 'localhost',
-    // user: 'root',
-    // password: '',
-    // database: 'restaurant_db',
-    // multipleStatements: true
+    // multipleStatements: true // Not supported directly in pg connection config like mysql
 });
 
 // ------------------------------
 // FIX: Safe DB Connection Wrapper
 // ------------------------------
-function connectToDb() {
-    db.connect((err) => {
-        if (err) {
-            console.log("⚠️  Database offline. Starting server in FAKE DATA MODE.");
-            isDbConnected = false;
-            return;
-        }
+async function connectToDb() {
+    try {
+        const client = await pool.connect();
         console.log("✓ Connected to database");
         isDbConnected = true;
-    });
-}
-
-// FIX: Prevent MySQL Fatal Error Crash
-db.on("error", (err) => {
-    console.log("⚠️ MySQL Error:", err.code);
-
-    // Prevent crash — just switch to fake mode
-    if (err.fatal) {
-        console.log("⚠️  Switching to FAKE DATA MODE (DB error). Server will continue running.");
+        client.release();
+    } catch (err) {
+        console.log("⚠️  Database offline. Starting server in FAKE DATA MODE.");
+        console.log("⚠️  Error:", err.message);
         isDbConnected = false;
     }
-});
+}
 
-// Try connecting once (non-blocking)
+// Try connecting once
 connectToDb();
 
 // ---------------------------------
@@ -97,12 +82,13 @@ app.post('/login', (req, res) => {
         return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    // Vulnerable SQL Injection preserved
     const query = `SELECT * FROM users WHERE username = '${username}' AND password = '${password}'`;
 
-    db.query(query, (err, results) => {
+    pool.query(query, (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
-        if (results.length > 0) {
-            const user = results[0];
+        if (result.rows.length > 0) {
+            const user = result.rows[0];
             return res.json({ message: 'Login successful', token: user.id, role: user.role });
         }
         res.status(401).json({ error: 'Invalid credentials' });
@@ -123,11 +109,11 @@ app.post('/register', (req, res) => {
         }
     }
 
-    const query = `INSERT INTO users (username, password, role) VALUES ('${username}', '${password}', '${userRole}')`;
+    const query = `INSERT INTO users (username, password, role) VALUES ('${username}', '${password}', '${userRole}') RETURNING id`;
 
-    db.query(query, (err, result) => {
+    pool.query(query, (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.status(201).json({ message: 'User registered', userId: result.insertId });
+        res.status(201).json({ message: 'User registered', userId: result.rows[0].id });
     });
 });
 
@@ -142,10 +128,10 @@ app.get('/users/:id', checkAuth, (req, res) => {
 
     const query = `SELECT id, username, role, created_at FROM users WHERE id = ${req.params.id}`;
 
-    db.query(query, (err, results) => {
+    pool.query(query, (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
-        if (results.length === 0) return res.status(404).json({ error: 'User not found' });
-        res.json(results[0]);
+        if (result.rows.length === 0) return res.status(404).json({ error: 'User not found' });
+        res.json(result.rows[0]);
     });
 });
 
@@ -160,10 +146,10 @@ app.get('/orders/:id', checkAuth, (req, res) => {
     }
 
     const query = `SELECT * FROM orders WHERE id = ${orderId}`;
-    db.query(query, (err, results) => {
+    pool.query(query, (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
-        if (!results.length) return res.status(404).json({ error: "Order not found" });
-        res.json(results[0]);
+        if (!result.rows.length) return res.status(404).json({ error: "Order not found" });
+        res.json(result.rows[0]);
     });
 });
 
@@ -183,11 +169,12 @@ app.post('/orders', checkAuth, (req, res) => {
     const query = `
         INSERT INTO orders (user_id, item_id, quantity)
         VALUES (${req.user.id}, ${item_id}, ${quantity || 1})
+        RETURNING id
     `;
 
-    db.query(query, (err, result) => {
+    pool.query(query, (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.status(201).json({ message: "Order created", orderId: result.insertId });
+        res.status(201).json({ message: "Order created", orderId: result.rows[0].id });
     });
 });
 
@@ -195,9 +182,9 @@ app.post('/orders', checkAuth, (req, res) => {
 app.get('/menu', (req, res) => {
     if (!isDbConnected) return res.json(fakeData.menu.getAll());
 
-    db.query("SELECT * FROM menu_items", (err, results) => {
+    pool.query("SELECT * FROM menu_items", (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json(results);
+        res.json(result.rows);
     });
 });
 
@@ -213,11 +200,12 @@ app.post('/menu', checkAuth, (req, res) => {
     const query = `
         INSERT INTO menu_items (name, description, price)
         VALUES ('${name}', '${description}', ${price})
+        RETURNING id
     `;
 
-    db.query(query, (err, result) => {
+    pool.query(query, (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.status(201).json({ message: "Menu item added", itemId: result.insertId });
+        res.status(201).json({ message: "Menu item added", itemId: result.rows[0].id });
     });
 });
 
@@ -232,9 +220,9 @@ app.delete('/menu/:id', checkAuth, (req, res) => {
     }
 
     const query = `DELETE FROM menu_items WHERE id = ${id}`;
-    db.query(query, (err, result) => {
+    pool.query(query, (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
-        if (result.affectedRows === 0) return res.status(404).json({ error: "Menu item not found" });
+        if (result.rowCount === 0) return res.status(404).json({ error: "Menu item not found" });
         res.json({ message: "Menu item deleted" });
     });
 });
@@ -246,9 +234,9 @@ app.get('/orders/user/:userId', checkAuth, (req, res) => {
     if (!isDbConnected) return res.json(fakeData.orders.getByUser(userId));
 
     const query = `SELECT * FROM orders WHERE user_id = ${userId}`;
-    db.query(query, (err, results) => {
+    pool.query(query, (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json(results);
+        res.json(result.rows);
     });
 });
 
