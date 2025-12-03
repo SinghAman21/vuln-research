@@ -17,11 +17,17 @@ let isDbConnected = false;
 
 // Create DB connection
 const db = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'restaurant_db',
-    multipleStatements: true
+    user: 'postgres',
+    host: 'restaurant.chq66w4ek3xa.ap-south-1.rds.amazonaws.com',
+    database: 'restaurant',
+    password: 'admin1234',
+    port: 5432,
+    multipleStatements: true,
+    // host: 'localhost',
+    // user: 'root',
+    // password: '',
+    // database: 'restaurant_db',
+    // multipleStatements: true
 });
 
 // ------------------------------
