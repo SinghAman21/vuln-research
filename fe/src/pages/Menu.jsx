@@ -2,12 +2,18 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { menuAPI, orderAPI } from '../services/api';
+import OrderPopup from '../components/OrderPopup';
+import EditMenuModal from '../components/EditMenuModal';
 
 const Menu = () => {
     const { user } = useAuth();
     const [menuItems, setMenuItems] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
+    const [isOrderPopupOpen, setIsOrderPopupOpen] = useState(false);
+    const [selectedItemForOrder, setSelectedItemForOrder] = useState(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [selectedItemForEdit, setSelectedItemForEdit] = useState(null);
 
     useEffect(() => {
         loadMenuItems();
@@ -38,16 +44,40 @@ const Menu = () => {
         }
     };
 
-    const handleOrder = async (itemId) => {
+    const handleOrderClick = (item) => {
         if (!user) {
             alert('Please login to place an order');
             return;
         }
+        setSelectedItemForOrder(item);
+        setIsOrderPopupOpen(true);
+    };
+
+    const handleConfirmOrder = async (itemId, quantity) => {
         try {
-            await orderAPI.create(itemId, 1);
+            await orderAPI.create(itemId, quantity);
             alert('Order placed!');
+            setIsOrderPopupOpen(false);
+            setSelectedItemForOrder(null);
         } catch (err) {
             alert('Failed to place order');
+        }
+    };
+
+    const handleEditClick = (item) => {
+        setSelectedItemForEdit(item);
+        setIsEditModalOpen(true);
+    };
+
+    const handleSaveEdit = async (itemId, updatedData) => {
+        try {
+            await menuAPI.update(itemId, updatedData);
+            alert('Menu item updated!');
+            setIsEditModalOpen(false);
+            setSelectedItemForEdit(null);
+            loadMenuItems(); // Refresh list
+        } catch (err) {
+            alert('Failed to update menu item');
         }
     };
 
@@ -116,14 +146,20 @@ const Menu = () => {
                                             <button
                                                 className="btn-sm"
                                                 style={{ backgroundColor: 'var(--primary-color)', border: 'none', cursor: 'pointer' }}
-                                                onClick={() => handleOrder(item.id)}
+                                                onClick={() => handleOrderClick(item)}
                                             >
                                                 Order Now
                                             </button>
 
                                             {user.role === 'manager' && (
                                                 <>
-                                                    <Link to={`/menu/edit/${item.id}`} className="btn-sm btn-edit" style={{ marginLeft: '5px' }}>Edit</Link>
+                                                    <button
+                                                        className="btn-sm btn-edit"
+                                                        style={{ marginLeft: '5px', border: 'none', cursor: 'pointer' }}
+                                                        onClick={() => handleEditClick(item)}
+                                                    >
+                                                        Edit
+                                                    </button>
                                                     <button
                                                         className="btn-sm btn-delete"
                                                         style={{ marginLeft: '5px', border: 'none', cursor: 'pointer' }}
@@ -141,6 +177,20 @@ const Menu = () => {
                     </div>
                 </div>
             </section>
+
+            <OrderPopup
+                isOpen={isOrderPopupOpen}
+                onClose={() => setIsOrderPopupOpen(false)}
+                onConfirm={handleConfirmOrder}
+                item={selectedItemForOrder}
+            />
+
+            <EditMenuModal
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                onSave={handleSaveEdit}
+                item={selectedItemForEdit}
+            />
         </>
     );
 };

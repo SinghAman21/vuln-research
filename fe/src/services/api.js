@@ -63,6 +63,15 @@ export const menuAPI = {
             headers: getAuthHeaders()
         });
         return response.json();
+    },
+
+    update: async (itemId, menuItem) => {
+        const response = await fetch(`${API_BASE_URL}/menu/${itemId}`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify(menuItem)
+        });
+        return response.json();
     }
 };
 
