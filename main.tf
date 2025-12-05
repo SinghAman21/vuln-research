@@ -10,6 +10,10 @@ terraform {
 
 provider "aws" {
   region = "ap-southeast-1"
+  profile = "Aman"
+  assume_role {
+    role_arn = "arn:aws:iam::674171865029:role/terraform-by-aman"
+  }
 }
 
 data "aws_availability_zones" "available" {
@@ -50,7 +54,7 @@ resource "aws_internet_gateway" "vuln_igw" {
   }
 }
 
-resource "aws_subnet" "public_subnet" {
+resource "aws_subnet" "public_subnet_1" {
   vpc_id                  = aws_vpc.vuln_vpc.id
   cidr_block              = "10.0.1.0/24"
   map_public_ip_on_launch = true
@@ -86,7 +90,7 @@ resource "aws_route_table" "public_rt" {
 }
 
 resource "aws_route_table_association" "public_rta" {
-  subnet_id      = aws_subnet.public_subnet.id
+  subnet_id      = aws_subnet.public_subnet_1.id
   route_table_id = aws_route_table.public_rt.id
 }
 
@@ -130,10 +134,10 @@ resource "aws_security_group" "rds_sg" {
   vpc_id      = aws_vpc.vuln_vpc.id
 
   ingress {
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [aws_security_group.eb_sg.id]
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   tags = {
@@ -143,7 +147,7 @@ resource "aws_security_group" "rds_sg" {
 
 resource "aws_db_subnet_group" "vuln_subnet_group" {
   name       = "vuln-subnet-group"
-  subnet_ids = [aws_subnet.public_subnet.id, aws_subnet.public_subnet_2.id]
+  subnet_ids = [aws_subnet.public_subnet_1.id, aws_subnet.public_subnet_2.id]
 }
 
 resource "aws_db_instance" "vuln_postgres" {
@@ -211,7 +215,7 @@ resource "aws_elastic_beanstalk_environment" "vuln_env" {
   setting {
     namespace = "aws:ec2:vpc"
     name      = "Subnets"
-    value     = aws_subnet.public_subnet.id
+    value     = aws_subnet.public_subnet_1.id
   }
 
   setting {
