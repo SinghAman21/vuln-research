@@ -11,9 +11,6 @@ terraform {
 provider "aws" {
   region = "ap-southeast-1"
   profile = "Aman"
-  assume_role {
-    role_arn = "arn:aws:iam::674171865029:role/terraform-by-aman"
-  }
 }
 
 data "aws_availability_zones" "available" {
@@ -153,7 +150,7 @@ resource "aws_db_subnet_group" "vuln_subnet_group" {
 resource "aws_db_instance" "vuln_postgres" {
   identifier              = "vuln-postgres"
   engine                  = "postgres"
-  engine_version          = "15.5"
+  engine_version          = "17.6"
   instance_class          = "db.t3.micro"
   allocated_storage       = 20
   max_allocated_storage   = 100
@@ -203,7 +200,13 @@ resource "aws_elastic_beanstalk_environment" "vuln_env" {
   setting {
     namespace = "aws:autoscaling:launchconfiguration"
     name      = "IamInstanceProfile"
-    value     = "aws-elasticbeanstalk-ec2-role"
+    value     = aws_iam_instance_profile.eb_instance_profile.name
+  }
+
+  setting {
+    namespace = "aws:elasticbeanstalk:environment"
+    name      = "ServiceRole"
+    value     = aws_iam_role.eb_service_role.name
   }
 
   setting {
@@ -266,6 +269,25 @@ resource "aws_elastic_beanstalk_environment" "vuln_env" {
   ]
 }
 
+resource "null_resource" "setup_database" {
+  depends_on = [aws_db_instance.vuln_postgres]
+
+  provisioner "local-exec" {
+    command = <<EOT
+      psql -h ${aws_db_instance.vuln_postgres.endpoint} \
+           -U ${var.db_user} \
+           -d ${var.db_name} \
+           -f fe/setup.sql
+    EOT
+    interpreter = ["bash", "-c"]
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = "echo 'Database setup complete - no cleanup needed'"
+  }
+}
+
 resource "aws_s3_bucket_website_configuration" "frontend_website" {
   bucket = aws_s3_bucket.frontend_bucket.id
 
@@ -296,7 +318,7 @@ resource "aws_s3_bucket_policy" "frontend_policy" {
 }
 
 resource "aws_iam_role" "eb_service_role" {
-  name = "aws-elasticbeanstalk-service-role"
+  name = "vuln-eb-service-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -313,7 +335,7 @@ resource "aws_iam_role" "eb_service_role" {
 }
 
 resource "aws_iam_role" "eb_instance_role" {
-  name = "aws-elasticbeanstalk-ec2-role"
+  name = "vuln-eb-ec2-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -327,6 +349,11 @@ resource "aws_iam_role" "eb_instance_role" {
       }
     ]
   })
+}
+
+resource "aws_iam_instance_profile" "eb_instance_profile" {
+  name = "vuln-eb-ec2-profile"
+  role = aws_iam_role.eb_instance_role.name
 }
 
 resource "aws_iam_role_policy_attachment" "eb_service_policy" {
